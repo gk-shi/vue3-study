@@ -1,8 +1,13 @@
-import { track, trigger } from './effect'
+// 依赖收集 和 更新触发
+import { effect, track, trigger } from './effect'
+// 进行依赖收集的操作类型 和 触发更新操作的类型枚举
 import { TrackOpTypes, TriggerOpTypes } from './operations'
+// hasChanged 是判断两个变量是否发生变化，主要是当 NaN 变为 NaN 的时候认为没变
 import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
+// 集合类型
 import { CollectionTypes } from './collectionHandlers'
+import { watch } from '../../runtime-core/src/apiWatch'
 
 declare const RefSymbol: unique symbol
 
@@ -27,6 +32,7 @@ export type ToRefs<T = any> = {
   [K in keyof T]: T[K] extends Ref ? T[K] : Ref<UnwrapRef<T[K]>>
 }
 
+// 将对象转换为响应式，否则返回原值
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val
 
@@ -74,6 +80,15 @@ class RefImpl<T> {
   }
 }
 
+// const t = ref(1)
+// console.log('toRaw === ', toRaw(t))
+
+// const q = reactive({
+//   a: 123
+// })
+// const qo = ref(q)
+// console.log('qo === ', qo)
+
 function createRef(rawValue: unknown, shallow = false) {
   if (isRef(rawValue)) {
     return rawValue
@@ -85,10 +100,27 @@ export function triggerRef(ref: Ref) {
   trigger(toRaw(ref), TriggerOpTypes.SET, 'value', __DEV__ ? ref.value : void 0)
 }
 
+// const srf = shallowRef({ a: 1 })
+
+// effect(() => {
+//   console.log('srf.value.a 改变了=== ', srf.value.a)
+// })
+
+// srf.value.a = 2
+// console.log('srf --- ', srf)
+
+// triggerRef(srf)
+
+// ref 解套，获取 ref 的 raw 值
 export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
   return isRef(ref) ? (ref.value as any) : ref
 }
-
+/*
+ 1.根属性 ref 的 get 自动 Unref
+ 2. set:
+  - 如果是将非 ref 值设置给 ref 值，则更新 ref 值的 value
+  - 否则反射到 target 的默认 set 操作
+*/
 const shallowUnwrapHandlers: ProxyHandler<any> = {
   get: (target, key, receiver) => unref(Reflect.get(target, key, receiver)),
   set: (target, key, value, receiver) => {
@@ -102,6 +134,20 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
   }
 }
 
+// const testObj = { a: 1 }
+// const testProxy = new Proxy(testObj, {
+//   set (target, key, value, receiver) {
+//     console.log('进行了 set 操作')
+//     Reflect.set(target, key, value, receiver)
+//   }
+// })
+// Reflect.set(testProxy, 'a', 123)
+// console.log('testObj === ', testObj)
+
+/* 
+如果目标对象是个响应式对象，则直接返回目标对象，
+否则进行代理，返回的代理对象 get 会对目标对象的根属性中的 ref 进行解套获取
+*/
 export function proxyRefs<T extends object>(
   objectWithRefs: T
 ): ShallowUnwrapRef<T> {
@@ -118,6 +164,7 @@ export type CustomRefFactory<T> = (
   set: (value: T) => void
 }
 
+// 自定义 ref implementation, 并对其依赖项跟踪和更新触发进行显式控制
 class CustomRefImpl<T> {
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
@@ -157,6 +204,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   return ret
 }
 
+// 构造一个 ref 对象，将响应式对象的某个属性转为 ref 使用 (toRef)
 class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly __v_isRef = true
 
@@ -171,6 +219,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
+// 将响应式对象的指定属性转为 Ref(或直接返回 Ref)
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K

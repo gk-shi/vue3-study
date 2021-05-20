@@ -1,16 +1,38 @@
+/* 
+isObject: params is Record<any, any>
+
+toRawType: get RawType from strings like [object rawtype]
+
+def: Object.defineProperty => configurable: true  enumerable: false
+*/
 import { isObject, toRawType, def } from '@vue/shared'
+
+/* 
+基础数据的处理集合：object number  string ...
+
+readonly: 只读数据
+
+shallow: 浅层响应数据，嵌套的对象不是响应式
+
+*/
 import {
   mutableHandlers,
   readonlyHandlers,
   shallowReactiveHandlers,
   shallowReadonlyHandlers
 } from './baseHandlers'
+
+/* 
+collection 包括： Map Set WeakMap WeakSet
+*/
 import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers,
   shallowCollectionHandlers,
   shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
+import { effect } from './effect'
+
 import { UnwrapRef, Ref } from './ref'
 
 export const enum ReactiveFlags {
@@ -37,7 +59,11 @@ const enum TargetType {
   COMMON = 1,
   COLLECTION = 2
 }
-
+/**
+ * @description: 根据 rawType返回响应式对象类型
+ * @param {string} rawType  类似[object Array]的Array
+ * @return {*} Object/Array: 1  (Weak)map/set: 2  其他：0
+ */
 function targetTypeMap(rawType: string) {
   switch (rawType) {
     case 'Object':
@@ -53,13 +79,20 @@ function targetTypeMap(rawType: string) {
   }
 }
 
+/**
+ * @description: 获取对象的 type
+ * @param {Target} value
+ * @return {*}
+ */
 function getTargetType(value: Target) {
+  // Object.preventExtensions / seal（密封） / freeze 不可扩展
   return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
     ? TargetType.INVALID
     : targetTypeMap(toRawType(value))
 }
 
 // only unwrap nested ref
+// 对嵌套的 ref 进行类型递归解套
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
 
 /**
@@ -186,6 +219,7 @@ function createReactiveObject(
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
   if (
+    // 如果目标对象有原始对象存在，表示该对象已经是 reactive
     target[ReactiveFlags.RAW] &&
     !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
   ) {
@@ -205,6 +239,7 @@ function createReactiveObject(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
   )
+  // 设置原始对象和代理对象的映射关系
   proxyMap.set(target, proxy)
   return proxy
 }
@@ -234,3 +269,77 @@ export function markRaw<T extends object>(value: T): T {
   def(value, ReactiveFlags.SKIP, true)
   return value
 }
+
+// 个人测试内容：
+// 1.shallowReactive 嵌套内容修改不会触发更新
+// const q = reactive({
+//   a: 1
+//   b: {
+//     c: 3
+//   }
+// })
+
+// const w = shallowReactive({
+//   a: 1
+//   b: {
+//     c: 3
+//   }
+// })
+// effect(() => {
+//   console.log('q.b.c  == ', q.b.c)
+// })
+
+// effect(() => {
+//   console.log('w.b.c  == ', w.b.c)
+// })
+
+// console.log('qc before === ', q.b.c)
+// q.b.c = 123
+
+// console.log('wc before === ', w.b.c)
+// w.b.c = 123
+
+// 2. shallowReactive 如果是一个 reactive 对象，会直接返回 reactive 对象
+// const reactiveObj = reactive({
+//   a: 1,
+//   b: {
+//     d: 4
+//   }
+// })
+
+// effect(() => {
+//   console.log('reactiveObj.b.d == ', reactiveObj.b.d)
+// })
+
+// const shallowReactiveObj = shallowReactive(reactiveObj)
+// shallowReactiveObj.b.d = 123
+// console.log('reactiveObj === shallowReactiveObj === ', reactiveObj === shallowReactiveObj)
+
+// 3.readonly 一个 reactive 对象，则 readonly 对象的原始对象存的是该 reactive 对象
+// const rObj = reactive({
+//   a: 1
+// })
+
+// const readObj = readonly(rObj)
+// console.log('readObj === rObj :', readObj === rObj)
+// console.log('readObj[ReactiveFlags.RAW] === rObj :', readObj[ReactiveFlags.RAW] === rObj)
+
+// 4. 对 readonly 进行 reactive 得到的仍然是 readonly 原来的对象
+// const readonlyObj = readonly({
+//   a: 3
+// })
+
+// const rObj = reactive(readonlyObj)
+
+// console.log(readonlyObj === rObj)
+
+// 5. 代理一个已经被代理的对象
+// const original = {
+//   a: 1
+// }
+
+// const r1 = reactive(original)
+
+// const r2 = reactive(r1)
+
+// console.log('r1 === r2 ? ', r1 === r2)

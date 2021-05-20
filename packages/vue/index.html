@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app">
+        {{foo}}
+        <lee/>
+    </div>
+    <script src="./dist/vue.global.js"></script>
+    <script>
+        const { createApp } = Vue
+        createApp({
+            data() {
+                return {
+                    foo: '开始 vue 3 源码调试之旅~'
+                }
+            }
+        })
+        .component('lee', {
+            template:'<p> enjoy it ！</p>'
+        })
+        .mount('#app')
+    </script>
+</body>
+</html>

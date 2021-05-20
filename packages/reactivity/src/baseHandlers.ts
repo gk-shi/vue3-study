@@ -29,6 +29,7 @@ import {
 } from '@vue/shared'
 import { isRef } from './ref'
 
+// 判断哪些字段不应该被依赖收集
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
 const builtInSymbols = new Set(
