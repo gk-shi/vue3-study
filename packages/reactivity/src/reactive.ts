@@ -34,6 +34,7 @@ import {
 import { effect } from './effect'
 
 import { UnwrapRef, Ref } from './ref'
+import { watchEffect } from '@vue/runtime-dom'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
@@ -343,3 +344,88 @@ export function markRaw<T extends object>(value: T): T {
 // const r2 = reactive(r1)
 
 // console.log('r1 === r2 ? ', r1 === r2)
+
+
+
+
+
+
+/* 
+
+测试 baseHandlers.ts 文件中的内容
+由于它是被引入到该文件，在那边会报未先引入的错误
+
+*/
+
+// case 1 案列
+// const obj = {}
+// const arr = reactive([obj, {}])
+// effect(() => {
+//   console.log('arr.indexOf(obj) == ', arr.indexOf(obj))
+// })
+
+// arr.reverse()
+
+
+// case 2 案列
+// const test = {}
+// const rtest = reactive(test)
+// const arr = reactive([])
+// arr.push(test)
+// console.log(arr.includes(rtest) === true)
+
+
+// case 3 只读响应式对象禁止修改
+// const r = reactive({ a: 123 })
+// const ronly = readonly(r)
+// effect(() => console.log('ronly.a == ', ronly.a))
+// r.a = 456
+// ronly.a = 789 // 报错
+
+
+// case 4 监听不存在的属性，需要触发 ADD 类型的 trigger
+// 注释掉 baseHandlers.ts 中对应代码则不会触发更改输出
+// const robj = reactive({ a: 1 })
+// effect(() => console.log('robj ===-- ', robj.c))
+// robj.c = 123
+
+// const rArr = reactive([1])
+// effect(() => console.log('rArr[1] === ', rArr[1]))
+// rArr[1] = 123
+
+
+
+// case 5 对象 in 操作符过滤内置 Symbol 属性
+// const s = Symbol.iterator
+// const o = Symbol('o')
+// const t = reactive({
+//   [s]: 234,
+//   [o]: 123
+// })
+
+// effect(() => {
+//   if (s in t) {
+//     console.log('[s]', t[s])
+//   }
+// })
+
+// effect(() => {
+//   if (o in t) {
+//     console.log('[o]', t[o])
+//   }
+// })
+
+// t[s] = 567
+// t[o] = 78000
+
+
+
+// case 6 测试 ownKeys 对数组的 for...in 的拦截
+// const arr = reactive([])
+// effect(() => {
+//   console.log('start === ')
+//   for(const idx in arr) {
+//     console.log('idx == ', idx)
+//   }
+// })
+// arr.push(1, 2, 3)

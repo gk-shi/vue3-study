@@ -1,3 +1,7 @@
+### 总结说明
+
+
+
 该文件主要提供的是将对象转为`reactive`的方法，分为：
 
 - `reactive`
@@ -112,9 +116,8 @@ function createReactiveObject(
 
 - 如果`Target`已经是一个代理对象，并且它不是一个`reactive`准备生成`readonly`的话，直接返回`Target`。
 
-- 如果`Target`已经存在于该代理方式的 Map 中，再次代理的话会返回已经存在的代理对象
-
   - ```typescript
+    // case 1
     const original = {
       a: 1
     }
@@ -124,11 +127,26 @@ function createReactiveObject(
     const r2 = reactive(r1)
     
     console.log('r1 === r2 ? ', r1 === r2)
+    
+    
+    // case 2
+    const obj = {
+      a: 1
+    }
+    
+    const readO = readonly(obj)
+    
+    const rO = reactive(readO)
+    
+    console.log('rO === readO : ', readO === rO)
     ```
+
+- 如果`Target`已经存在于该代理方式的 Map 中，再次代理的话会返回已经存在的代理对象
 
 - 如果不是可代理对象(object/Array/(Weak)Map/(Weak)Set)，则直接返回`Target`
   - `reeactive`只能针对对象
   - 像`number`、`string`等需要`ref`来模拟
+  
 - 生成代理对象，保存 raw -> proxy 映射关系
 
 

@@ -302,3 +302,13 @@ type SymbolExtract<T> = (T extends { [Symbol.asyncIterator]: infer V }
     : {})
 
 type UnwrappedObject<T> = { [P in keyof T]: UnwrapRef<T[P]> } & SymbolExtract<T>
+
+
+
+// case 1 仅对数组的合法整型 key 不做 unwrap
+// const arr = [ref(0)]
+// arr[1.4] = ref(1)
+
+// const ra = reactive(arr)
+// console.log('ra[0] == ', ra[0])
+// console.log('ra[1.4] == ', ra[1.4])

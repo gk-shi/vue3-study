@@ -5,6 +5,13 @@
 > 本项目以 vue 3.1.0-beta 作为基础版本，进行源码分析、学习，构建文件思维导图，完善知识图谱，并对每个文件的重点内容做 markdown 文档说明
 
 
+### 文件分析进度
+
+- `reactivity`模块
+  - reavtive.ts
+  - ref.ts
+  - baseHandlers.ts
+
 
 ### 源码调试方法
 

@@ -51,10 +51,18 @@ const arrayInstrumentations: Record<string, Function> = {}
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
     const arr = toRaw(this)
     for (let i = 0, l = this.length; i < l; i++) {
+      // effect 可以响应 indexOf 等方法
+      // reacitve.ts 中 case 1
       track(arr, TrackOpTypes.GET, i + '')
     }
     // we run the method using the original args first (which may be reactive)
     const res = method.apply(arr, args)
+    // 如果push的是普通对象，但调用的是响应式对象
+    // 也要认为存在
+    // raw: obj -> reactive: robj
+    // otherArr.push(raw)
+    // otherArr.includes(robj)  => true
+    // reactive.ts 中 case 2
     if (res === -1 || res === false) {
       // if that didn't work, run it again using raw values.
       return method.apply(arr, args.map(toRaw))
@@ -68,6 +76,9 @@ const arrayInstrumentations: Record<string, Function> = {}
 ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
   const method = Array.prototype[key] as any
   arrayInstrumentations[key] = function(this: unknown[], ...args: unknown[]) {
+    // 上述方法会修改数组 length 的值，
+    // 为了防止某些时刻循环触发更新，需要暂停收集
+    // 执行完之后再开启依赖收集
     pauseTracking()
     const res = method.apply(this, args)
     resetTracking()
@@ -93,6 +104,8 @@ function createGetter(isReadonly = false, shallow = false) {
             : reactiveMap
         ).get(target)
     ) {
+      // 如果是代理对象获取原始对象，
+      // 返回对应 target 即可
       return target
     }
 
@@ -113,6 +126,7 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 
     if (!isReadonly) {
+      // 只读不需要收集，因为响应式对象可以完成收集
       track(target, TrackOpTypes.GET, key)
     }
 
@@ -122,6 +136,10 @@ function createGetter(isReadonly = false, shallow = false) {
 
     if (isRef(res)) {
       // ref unwrapping - does not apply for Array + integer key.
+      // 默认对响应式数组中的 ref 是不做 unwrap 的
+      // 但是如果有主动设置 arr[1.4] = ref(1) 这种非法的浮点数下标
+      // 会当做对象的属性来处理，进行 unwrap
+      // 见 ref.ts 中的  case 1
       const shouldUnwrap = !targetIsArray || !isIntegerKey(key)
       return shouldUnwrap ? res.value : res
     }
@@ -130,6 +148,16 @@ function createGetter(isReadonly = false, shallow = false) {
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.
+      // 嵌套的属性对象延迟代理，避免循环依赖
+      /*
+        e.g.
+        const target = {
+          a: {
+            b: target
+          },
+          c: 1
+        }
+      */
       return isReadonly ? readonly(res) : reactive(res)
     }
 
@@ -167,6 +195,8 @@ function createSetter(shallow = false) {
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver)) {
       if (!hadKey) {
+        // 如果监听的是不存在的属性，需要触发该添加属性的更新才能执行
+        // reactive.ts 中的 case 4
         trigger(target, TriggerOpTypes.ADD, key, value)
       } else if (hasChanged(value, oldValue)) {
         trigger(target, TriggerOpTypes.SET, key, value, oldValue)
@@ -188,6 +218,8 @@ function deleteProperty(target: object, key: string | symbol): boolean {
 
 function has(target: object, key: string | symbol): boolean {
   const result = Reflect.has(target, key)
+  // 对象 in 操作符过滤内置 Symbol 属性
+  // reactive.ts 中 case 5
   if (!isSymbol(key) || !builtInSymbols.has(key)) {
     track(target, TrackOpTypes.HAS, key)
   }
@@ -195,6 +227,9 @@ function has(target: object, key: string | symbol): boolean {
 }
 
 function ownKeys(target: object): (string | symbol)[] {
+  // has 能拦截非数组对象的 in 操作符  key in object
+  // 这里是拦截数组的 for...in 操作
+  // reactive.ts 中 case 6 案例
   track(target, TrackOpTypes.ITERATE, isArray(target) ? 'length' : ITERATE_KEY)
   return Reflect.ownKeys(target)
 }
