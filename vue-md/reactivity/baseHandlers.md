@@ -41,18 +41,18 @@ robj[sym] = 789  // 触发 effect 2
 
 - 兼容了一个特殊情况
 
-  - ```typescript
-    /*
-    当响应式数组添加了非响应式对象,判断响应式数组是否包含其对应的响应式对象应该是 true
-    */
-    const obj = {}
-    const robj = reactive(obj)
-    
-    const rArr = reactive([])
-    rArr.push(obj)
-    
-    rArr.includes(robj) // ==> true
-    ```
+  ```typescript
+  /*
+  当响应式数组添加了非响应式对象,判断响应式数组是否包含其对应的响应式对象应该是 true
+  */
+  const obj = {}
+  const robj = reactive(obj)
+  
+  const rArr = reactive([])
+  rArr.push(obj)
+  
+  rArr.includes(robj) // ==> true
+  ```
 
 ##### 2.2 push, pop, shift, unshift, splice
 
@@ -107,35 +107,31 @@ const arr = reactive<Array<number>>([]);
 
   - 如果是非法的数组下标(如浮点数下标)，则会进行解套
 
-    - ```typescript
-      // case 1 仅对数组的合法整型 key 不做 unwrap
-      const arr = [ref(0)]
-      arr[1.4] = ref(1)
-      
-      const ra = reactive(arr)
-      console.log('ra[0] == ', ra[0])  // Ref<number> 类型
-      console.log('ra[1.4] == ', ra[1.4]) // 1
-      ```
+```typescript
+ // case 1 仅对数组的合法整型 key 不做 unwrap
+  const arr = [ref(0)]
+  arr[1.4] = ref(1)
+  
+  const ra = reactive(arr)
+  console.log('ra[0] == ', ra[0])  // Ref<number> 类型
+  console.log('ra[1.4] == ', ra[1.4]) // 1
+```
 
   - 嵌套的对象会延迟代理(当访问到的时候再代理)
+```typescript
+  const target = {
+    a: {
+      b: target
+    },
+    c: 1
+  }
+  
+  const reactiveT = reactive(target) // 此时仅代理 target ，拦截外层 a，c 属性
+  
+  reactiveT.a.b // 此时会拦截到 a.b 的操作 
+```
 
-    - ```typescript
-      const target = {
-        a: {
-          b: target
-        },
-        c: 1
-      }
-      
-      const reactiveT = reactive(target) // 此时仅代理 target ，拦截外层 a，c 属性
-      
-      reactiveT.a.b // 此时会拦截到 a.b 的操作 
-      
-      ```
-
-    - 这样做的另外一个好处就如上述代码，可以避免递归循环依赖的代理
-
-
+- 这样做的另外一个好处就如上述代码，可以避免递归循环依赖的代理
 
 
 
@@ -151,15 +147,15 @@ const arr = reactive<Array<number>>([]);
 
 - 触发更新上有区分 ADD 和 SET 类型，前者是添加不存在的属性，后者是修改
 
-  - ```typescript
-    const robj = reactive({ a: 1 })
+```typescript
+const robj = reactive({ a: 1 })
     effect(() => console.log('robj ===-- ', robj.c))
     robj.c = 123
     
     const rArr = reactive([1])
     effect(() => console.log('rArr[1] === ', rArr[1]))
     rArr[1] = 123
-    ```
+```
 
 #### 5. 其他
 
@@ -167,46 +163,42 @@ const arr = reactive<Array<number>>([]);
 
 - `has()`：该方法主要是拦截非数组对象的`in`操作符，`foo in proxy`，会过滤掉 Symbol 内建值
 
-  - ```typescript
-    const s = Symbol.iterator
-    const o = Symbol('o')
-    const t = reactive({
-      [s]: 234,
-      [o]: 123
-    })
-    
-    effect(() => {  // effect 1
-      if (s in t) {
-        console.log('[s]', t[s])
-      }
-    })
-    
-    effect(() => {  // effect 2
-      if (o in t) {
-        console.log('[o]', t[o])
-      }
-    })
-    
-    t[s] = 567 // 不触发 effect 1
-    t[o] = 78000 // 触发 effect 2
-    ```
+```typescript
+const s = Symbol.iterator
+const o = Symbol('o')
+const t = reactive({
+  [s]: 234,
+  [o]: 123
+})
+
+effect(() => {  // effect 1
+  if (s in t) {
+    console.log('[s]', t[s])
+  }
+})
+
+effect(() => {  // effect 2
+  if (o in t) {
+    console.log('[o]', t[o])
+  }
+})
+
+t[s] = 567 // 不触发 effect 1
+t[o] = 78000 // 触发 effect 2
+```
 
 - `ownKeys()`：触发迭代 ITERATE 类型 tracker，如果是数组（拦截 for(idx in arr)）的话，key 为 length，否则为 symbol 类型
 
-  - ```typescript
-    const arr = reactive([])
-    effect(() => {
-      console.log('start === ')
-      for(const idx in arr) {
-        console.log('idx == ', idx)
-      }
-    })
-    arr.push(1, 2, 3)
-    ```
-
-
-
-
+```typescript
+const arr = reactive([])
+effect(() => {
+  console.log('start === ')
+  for(const idx in arr) {
+    console.log('idx == ', idx)
+  }
+})
+arr.push(1, 2, 3)
+```
 
 
 

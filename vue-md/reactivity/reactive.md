@@ -116,30 +116,30 @@ function createReactiveObject(
 
 - 如果`Target`已经是一个代理对象，并且它不是一个`reactive`准备生成`readonly`的话，直接返回`Target`。
 
-  - ```typescript
-    // case 1
-    const original = {
-      a: 1
-    }
-    
-    const r1 = reactive(original)
-    
-    const r2 = reactive(r1)
-    
-    console.log('r1 === r2 ? ', r1 === r2)
-    
-    
-    // case 2
-    const obj = {
-      a: 1
-    }
-    
-    const readO = readonly(obj)
-    
-    const rO = reactive(readO)
-    
-    console.log('rO === readO : ', readO === rO)
-    ```
+  ```typescript
+  // case 1
+  const original = {
+    a: 1
+  }
+  
+  const r1 = reactive(original)
+  
+  const r2 = reactive(r1)
+  
+  console.log('r1 === r2 ? ', r1 === r2)
+  
+  
+  // case 2
+  const obj = {
+    a: 1
+  }
+  
+  const readO = readonly(obj)
+  
+  const rO = reactive(readO)
+  
+  console.log('rO === readO : ', readO === rO)
+  ```
 
 - 如果`Target`已经存在于该代理方式的 Map 中，再次代理的话会返回已经存在的代理对象
 
