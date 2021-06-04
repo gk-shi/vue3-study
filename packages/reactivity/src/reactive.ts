@@ -429,3 +429,84 @@ export function markRaw<T extends object>(value: T): T {
 //   }
 // })
 // arr.push(1, 2, 3)
+
+
+
+/* 
+
+测试 collectionHandlers.ts 文件中的代码
+
+*/
+// case 6
+// get 时的对象无论是 原对象 还是 响应式对象，都会进行依赖收集
+// const m = new Map()
+// const o = { a: 1 }
+// const reo = reactive(o)
+// const rem = reactive(m)
+
+// effect(() => console.log('rem.get(o) === ', rem.get(o)))
+// effect(() => console.log('rem.get(reo) === ', rem.get(reo)))
+
+// rem.set(reo, '3455')
+// // or
+// // rem.set(o, '3455')
+
+
+
+// case 7 需要触发当前不存在键的依赖收集
+// const a = reactive(new Map())
+// const b = readonly(a)
+
+// effect(() => console.log(b.get('foo')))
+
+// a.set('foo', 2)
+
+
+
+
+
+// case 8 将响应式对象本身及其原始对象同时作为键加入 Set 和 Map
+
+const obj = { a: 1 }
+const reObj = reactive(obj)
+
+// // 没有代理的
+// const map = new Map()
+// map.set(obj, 123)
+// map.set(reObj, 345)
+// console.log('map === ', map)
+
+// // 代理 Map
+// const rmap = reactive(new Map())
+// rmap.set(obj, 234)
+// rmap.set(reObj, 456)
+// console.log('rmap === ', rmap)
+
+// // 代理 Set
+// const rset = reactive(new Set())
+// rset.add(obj)
+// rset.add(reObj)
+// console.log('rset === ', rset)
+
+
+// case 8 delete 的时候，
+// 如果原来的代理对象中就有 响应式对象及其原始对象作为键值
+// const obj = { a: 1 }
+// const reObj = reactive(obj)
+
+// const map = new Map()
+// map.set(obj, 123)
+// map.set(reObj, 345)
+// console.log('map === ', map)
+
+// const rmap = reactive(map)
+// rmap.delete(reObj)
+// console.log('rmap = ', rmap)
+
+
+console.log('colleftt === ', mutableCollectionHandlers)
+const rm = reactive(new Map())
+window.rm = rm
+console.log('rm === ', rm)
+
+rm.get('foo')

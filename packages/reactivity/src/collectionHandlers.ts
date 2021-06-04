@@ -10,6 +10,7 @@ import {
   isMap
 } from '@vue/shared'
 
+// Weak(Map/Set) 集合类型是不可迭代的，因为它是弱引用
 export type CollectionTypes = IterableCollections | WeakCollections
 
 type IterableCollections = Map<any, any> | Set<any>
@@ -39,12 +40,26 @@ function get(
   target = (target as any)[ReactiveFlags.RAW]
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
+  // reactive.ts 中 case 6 案例
+  // 如果 Map 或者 Set 的添加 键值对 时(Set 是键值对相同的)，
+  // 键如果是对象，那么该对象的响应式对象(如果存在)和原对象都要进行依赖收集，
   if (key !== rawKey) {
     !isReadonly && track(rawTarget, TrackOpTypes.GET, key)
   }
   !isReadonly && track(rawTarget, TrackOpTypes.GET, rawKey)
   const { has } = getProto(rawTarget)
+  // 嵌套的对象也应该是响应式
   const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
+  // 前一个 if 和 else if 是因为不确定原对象上的属性是不是响应式对象
+  /*
+    const obj = { a: 1 }
+    const reObj = reactive(obj)
+    const m = new Map()
+
+    m.set(obj, 123)
+    or
+    m.set(reObj, 123)
+  */
   if (has.call(rawTarget, key)) {
     return wrap(target.get(key))
   } else if (has.call(rawTarget, rawKey)) {
@@ -52,6 +67,10 @@ function get(
   } else if (target !== rawTarget) {
     // #3602 readonly(reactive(Map))
     // ensure that the nested reactive `Map` can do tracking for itself
+    // reactive.ts case 7 案例
+    // 当为这种嵌套情况：const rMap = readonly(reactive(Map))，且 Map 最开始没有 foo,
+    // 先添加了 effect(() => rMap.get('foo')) 之后，再往 Map 里 set('foo', 12434),
+    // 这时候需要这一操作激活 reactive(Map) 本身的依赖收集才能触发后续更新
     target.get(key)
   }
 }
@@ -76,6 +95,9 @@ function size(target: IterableCollections, isReadonly = false) {
 }
 
 function add(this: SetTypes, value: unknown) {
+  // reactive.ts 中 case 8
+  // 同时将一个响应式对象本身以及其原始对象加入时，
+  // 只会保留原始对象在集合中
   value = toRaw(value)
   const target = toRaw(this)
   const proto = getProto(target)
@@ -93,10 +115,14 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   const { has, get } = getProto(target)
 
   let hadKey = has.call(target, key)
+  // reactive.ts 中 case 8
+  // 同时将一个响应式对象本身以及其原始对象加入时，
+  // 只会保留原始对象在集合中
   if (!hadKey) {
     key = toRaw(key)
     hadKey = has.call(target, key)
   } else if (__DEV__) {
+    // 如果是开发环境，会警告尽量不要这样设置
     checkIdentityKeys(target, has, key)
   }
 
@@ -118,6 +144,7 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
     key = toRaw(key)
     hadKey = has.call(target, key)
   } else if (__DEV__) {
+    // reactive.ts 中  case 8
     checkIdentityKeys(target, has, key)
   }
 
