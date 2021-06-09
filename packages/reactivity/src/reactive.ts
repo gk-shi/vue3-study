@@ -6,7 +6,7 @@ toRawType: get RawType from strings like [object rawtype]
 def: Object.defineProperty => configurable: true  enumerable: false
 */
 import { isObject, toRawType, def } from '@vue/shared'
-
+// import { effect, trigger } from './effect'
 /* 
 基础数据的处理集合：object number  string ...
 
@@ -31,10 +31,8 @@ import {
   shallowCollectionHandlers,
   shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
-import { effect } from './effect'
 
 import { UnwrapRef, Ref } from './ref'
-import { watchEffect } from '@vue/runtime-dom'
 
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
@@ -467,8 +465,8 @@ export function markRaw<T extends object>(value: T): T {
 
 // case 8 将响应式对象本身及其原始对象同时作为键加入 Set 和 Map
 
-const obj = { a: 1 }
-const reObj = reactive(obj)
+// const obj = { a: 1 }
+// const reObj = reactive(obj)
 
 // // 没有代理的
 // const map = new Map()
@@ -504,9 +502,22 @@ const reObj = reactive(obj)
 // console.log('rmap = ', rmap)
 
 
-console.log('colleftt === ', mutableCollectionHandlers)
-const rm = reactive(new Map())
-window.rm = rm
-console.log('rm === ', rm)
 
-rm.get('foo')
+/* 
+测试 effect.ts 中的例子
+*/
+
+// case 9
+// const r = reactive([1, 2, 3])
+// effect(() => {
+//   console.log('r[1] === ', r[1])
+// })
+// effect(() => {
+//   console.log('r[2] === ', r[2])
+// })
+// effect(() => {
+//   console.log('r.length === ', r.length)
+// })
+
+// r.length = 1
+

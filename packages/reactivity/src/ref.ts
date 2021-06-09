@@ -1,5 +1,5 @@
 // 依赖收集 和 更新触发
-import { effect, track, trigger } from './effect'
+import { track, trigger } from './effect'
 // 进行依赖收集的操作类型 和 触发更新操作的类型枚举
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 // hasChanged 是判断两个变量是否发生变化，主要是当 NaN 变为 NaN 的时候认为没变
@@ -7,7 +7,8 @@ import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 // 集合类型
 import { CollectionTypes } from './collectionHandlers'
-import { watch } from '../../runtime-core/src/apiWatch'
+// import { effect } from './effect'
+// import { watch } from '../../runtime-core/src/apiWatch'
 
 declare const RefSymbol: unique symbol
 
