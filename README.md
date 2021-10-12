@@ -20,7 +20,7 @@
 1. clone 本仓库
 
    ```shell
-   git clone https://git.xq5.com/shihuang/vue3-study.git
+   git clone https://github.com/gk-shi/vue3-study.git
    ```
 
    
